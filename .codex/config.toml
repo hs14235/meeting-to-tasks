@@ -1,0 +1,16 @@
+[mcp_servers.meeting_to_tasks]
+command = ".venv/Scripts/python.exe"
+args = ["-m", "app.mcp_server"]
+cwd = "backend"
+startup_timeout_sec = 30
+tool_timeout_sec = 180
+default_tools_approval_mode = "writes"
+enabled = true
+required = false
+
+[mcp_servers.meeting_to_tasks.env]
+RAG_STORE = "memory"
+EMBED_PROVIDER = "sentence-transformers"
+
+[mcp_servers.meeting_to_tasks.tools.create_github_issues]
+approval_mode = "prompt"

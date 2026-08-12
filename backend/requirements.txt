@@ -1,0 +1,8 @@
+fastapi
+httpx
+mcp==2.0.0
+numpy
+python-multipart
+pytest
+sentence-transformers
+uvicorn[standard]

@@ -1,0 +1,25 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+.npm-cache/
+
+# Environment
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Generated local data
+data/faiss.index
+data/faiss_meta.json
+data/meetings/
+
+# OS / editor
+.DS_Store
