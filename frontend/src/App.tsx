@@ -2,7 +2,9 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { useToast } from "./components/Toast";
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://127.0.0.1:8000";
+const API_BASE =
+  (import.meta.env.VITE_API_BASE as string) ||
+  `${window.location.protocol}//${window.location.hostname}:8000`;
 
 type MeetingSummary = {
   id: string;

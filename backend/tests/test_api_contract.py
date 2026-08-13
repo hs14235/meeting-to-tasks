@@ -107,3 +107,21 @@ def test_upload_route_delegates_to_meeting_service(monkeypatch):
     assert response.json()["chunks_indexed"] == 1
     assert dummy_service.calls[0][0] == "mtg-123"
     assert dummy_service.calls[0][2] == "meeting.txt"
+
+
+def test_cors_allows_private_lan_frontend_and_rejects_public_origin():
+    client = TestClient(main.app)
+    preflight_headers = {"Access-Control-Request-Method": "GET"}
+
+    lan = client.options(
+        "/healthz",
+        headers={"Origin": "http://10.131.6.115:5173", **preflight_headers},
+    )
+    public = client.options(
+        "/healthz",
+        headers={"Origin": "https://untrusted.example", **preflight_headers},
+    )
+
+    assert lan.status_code == 200
+    assert lan.headers["access-control-allow-origin"] == "http://10.131.6.115:5173"
+    assert public.status_code == 400

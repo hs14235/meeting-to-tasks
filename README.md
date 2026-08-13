@@ -86,7 +86,30 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-The frontend expects `VITE_API_BASE=http://127.0.0.1:8000` by default.
+Without an explicit `VITE_API_BASE`, the frontend uses its current hostname on backend port `8000`.
+
+### Test from a phone
+
+Connect the computer and phone to the same Wi-Fi network. Start the backend so it accepts LAN
+connections:
+
+```powershell
+cd backend
+$env:EMBED_PROVIDER="hash"
+$env:PUBLIC_DEMO_MODE="true"
+.\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+In a second terminal, expose Vite to the LAN:
+
+```powershell
+cd frontend
+npm run dev -- --host 0.0.0.0
+```
+
+Open the `Network` URL printed by Vite on the phone. Windows Firewall may ask once for permission;
+allow private networks only. VPN settings that block local-network discovery must be disabled for
+this test. `PUBLIC_DEMO_MODE=true` keeps GitHub writes disabled.
 
 ### 3. MCP server
 

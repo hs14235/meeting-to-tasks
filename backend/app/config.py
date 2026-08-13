@@ -7,6 +7,14 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+ALLOWED_ORIGIN_REGEX = os.getenv(
+    "ALLOWED_ORIGIN_REGEX",
+    (
+        r"^http://(?:localhost|127\.0\.0\.1|10(?:\.\d{1,3}){3}|"
+        r"192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})"
+        r":(?:5173|8081)$"
+    ),
+)
 
 # Vector store choice: "faiss" (if installed) or "memory".
 RAG_STORE = os.getenv("RAG_STORE", "memory")

@@ -5,7 +5,7 @@ from fastapi import Body, FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from .config import ALLOWED_ORIGINS, API_TITLE
+from .config import ALLOWED_ORIGINS, ALLOWED_ORIGIN_REGEX, API_TITLE
 from .runtime import extraction_service, issue_service, meeting_service
 from .services import ServiceError
 
@@ -19,6 +19,7 @@ app = FastAPI(title=API_TITLE)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
