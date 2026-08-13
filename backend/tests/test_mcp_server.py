@@ -44,7 +44,8 @@ async def test_index_meeting_tool_delegates_and_returns_structured_content(monke
     )
 
     assert result.is_error is False
-    assert result.structured_content == {"ok": True, "chunks_indexed": 2}
+    assert result.structured_content["ok"] is True
+    assert result.structured_content["chunks_indexed"] == 2
     assert dummy_service.index_calls == [
         (
             "weekly-sync",

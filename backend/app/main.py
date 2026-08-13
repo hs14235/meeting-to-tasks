@@ -9,6 +9,12 @@ from .config import ALLOWED_ORIGINS, API_TITLE
 from .runtime import extraction_service, issue_service, meeting_service
 from .services import ServiceError
 
+DEMO_TRANSCRIPT = """[09:02] Maya: Action: finalize the launch checklist by Friday.
+[09:04] Jordan: Action: add retrieval evaluation coverage before the release.
+[09:08] Priya: Decision: every GitHub issue must be previewed before creation.
+[09:11] Maya: Blocker: the onboarding copy still needs product review.
+"""
+
 app = FastAPI(title=API_TITLE)
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +43,54 @@ async def upload(file: UploadFile, meeting_id: str = Form(...), title: str = For
     try:
         raw_bytes = await file.read()
         return meeting_service.index_upload(meeting_id, title, file.filename, raw_bytes)
+    except ServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@app.post("/meetings/index")
+def index_meeting(payload: Dict[str, Any] = Body(...)):
+    try:
+        return meeting_service.index_meeting_text(
+            payload["meeting_id"], payload.get("title", ""), payload["transcript"]
+        )
+    except ServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@app.post("/meetings/demo")
+def load_demo():
+    try:
+        result = meeting_service.index_meeting_text("launch-readiness", "Launch readiness", DEMO_TRANSCRIPT)
+        return {**result, "meeting_id": "launch-readiness"}
+    except ServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@app.get("/meetings")
+def meetings():
+    return meeting_service.list()
+
+
+@app.get("/meetings/{meeting_id}")
+def meeting_detail(meeting_id: str):
+    try:
+        return meeting_service.get(meeting_id)
+    except ServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@app.delete("/meetings/{meeting_id}")
+def remove_meeting(meeting_id: str):
+    try:
+        return meeting_service.delete(meeting_id)
+    except ServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@app.put("/meetings/{meeting_id}/tasks")
+def update_drafts(meeting_id: str, payload: Dict[str, Any] = Body(...)):
+    try:
+        return meeting_service.update_drafts(meeting_id, payload.get("tasks", []))
     except ServiceError as exc:
         raise _http_error(exc) from exc
 
@@ -85,7 +139,7 @@ async def issues_preview(payload: Dict[str, Any] = Body(...)):
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True}
+    return {"ok": True, "demo_mode": issue_service.public_demo_mode}
 
 
 @app.post("/tasks/stream")

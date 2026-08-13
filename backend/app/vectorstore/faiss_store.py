@@ -41,11 +41,34 @@ class FaissStore(VectorStore):
         for i, record_id in enumerate(ids):
             self.id_to_meta[record_id] = metas[i]
 
+    def delete(self, filters):
+        if not faiss or self.index is None:
+            return 0
+        keep_indexes = [
+            index
+            for index, record_id in enumerate(self.ids)
+            if any(self.id_to_meta.get(record_id, {}).get(key) != value for key, value in filters.items())
+        ]
+        removed = len(self.ids) - len(keep_indexes)
+        if not removed:
+            return 0
+
+        vectors = [self.index.reconstruct(index) for index in keep_indexes]
+        kept_ids = [self.ids[index] for index in keep_indexes]
+        self.index = faiss.IndexFlatIP(self.dim)
+        if vectors:
+            self.index.add(self._norm(vectors))
+        self.ids = kept_ids
+        self.id_to_meta = {record_id: self.id_to_meta[record_id] for record_id in kept_ids}
+        return removed
+
     def query(self, embedding, k=5, filters=None):
         if not faiss or self.index is None or not self.ids:
             return []
         query = self._norm([embedding])
-        scores, idxs = self.index.search(query, min(k, len(self.ids)))
+        # Filtering after a global top-k can hide valid meeting-local hits.
+        candidate_count = len(self.ids) if filters else min(k, len(self.ids))
+        scores, idxs = self.index.search(query, candidate_count)
         out = []
         for idx, score in zip(idxs[0], scores[0]):
             record_id = self.ids[idx]
@@ -53,6 +76,8 @@ class FaissStore(VectorStore):
             if filters and any(meta.get(key) != value for key, value in (filters or {}).items()):
                 continue
             out.append((record_id, float(score), meta))
+            if len(out) >= k:
+                break
         return out
 
     def persist(self):

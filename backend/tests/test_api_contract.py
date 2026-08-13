@@ -23,6 +23,9 @@ class DummyStore:
     def query(self, embedding, k=5, filters=None):
         return []
 
+    def delete(self, filters):
+        return 0
+
 
 class DummyMeetingService:
     def __init__(self):
@@ -86,7 +89,7 @@ def test_index_upload_accepts_utf8_text_files(monkeypatch, tmp_path: Path):
 
     assert result["chunks_indexed"] == 1
     assert service.store.upserts
-    assert (tmp_path / "meetings" / "mtg-123" / "chunks.json").exists()
+    assert (tmp_path / "meeting_to_tasks.db").exists()
 
 
 def test_upload_route_delegates_to_meeting_service(monkeypatch):

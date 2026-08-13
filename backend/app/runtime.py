@@ -1,4 +1,4 @@
-from .config import EMBED_MODEL, EMBED_PROVIDER, FAISS_INDEX, FAISS_META, RAG_STORE
+from .config import EMBED_MODEL, EMBED_PROVIDER, FAISS_INDEX, FAISS_META, PUBLIC_DEMO_MODE, RAG_STORE
 from .embeddings import get_embedding_function
 from .services import ExtractionService, IssueService, MeetingService
 from .vectorstore.factory import get_store
@@ -12,4 +12,4 @@ meeting_service = MeetingService(
     embedder=get_embedding_function(EMBED_PROVIDER),
 )
 extraction_service = ExtractionService(meetings=meeting_service)
-issue_service = IssueService()
+issue_service = IssueService(public_demo_mode=PUBLIC_DEMO_MODE)

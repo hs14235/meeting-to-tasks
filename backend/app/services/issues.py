@@ -6,12 +6,16 @@ import httpx
 
 from ..github import create_issue, ensure_labels, find_issue_by_fp, task_fingerprint
 from ..storage import load_chunks
+from ..storage import record_publication
 from .errors import ServiceError
 from .shared import append_source_snippet, build_snippet_map, coerce_labels, validate_meeting_id
 
 
 class IssueService:
     repo_pattern = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+
+    def __init__(self, public_demo_mode: bool = False) -> None:
+        self.public_demo_mode = public_demo_mode
 
     def validate_repo(self, repo: str) -> None:
         if self.repo_pattern.match(repo):
@@ -50,6 +54,12 @@ class IssueService:
         tasks: List[Dict[str, Any]],
         assignee_map: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
+        if self.public_demo_mode:
+            raise ServiceError(
+                status_code=403,
+                where="client",
+                error="Public demo mode is preview-only. GitHub issue creation is disabled.",
+            )
         self.validate_repo(repo)
         assignee_map = assignee_map or {}
 
@@ -77,6 +87,15 @@ class IssueService:
 
                 existing = await find_issue_by_fp(repo, fingerprint)
                 if existing:
+                    record_publication(
+                        meeting_id,
+                        repo,
+                        title,
+                        fingerprint,
+                        "skipped-duplicate",
+                        existing["number"],
+                        existing["html_url"],
+                    )
                     created.append(
                         {
                             "number": existing["number"],
@@ -98,6 +117,15 @@ class IssueService:
                     body,
                     labels=coerce_labels(task.get("labels")),
                     assignee=gh_user,
+                )
+                record_publication(
+                    meeting_id,
+                    repo,
+                    title,
+                    fingerprint,
+                    "created",
+                    issue["number"],
+                    issue["html_url"],
                 )
                 created.append(
                     {

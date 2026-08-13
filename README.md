@@ -9,6 +9,9 @@ Meeting to Tasks turns plain-text meeting transcripts into reviewable task draft
 - Extract task candidates with Ollama when available.
 - Fall back to a narrow rule-based extractor for explicit action lines.
 - Preview GitHub issues before creating anything.
+- Review and edit source-grounded drafts in a responsive meeting workspace.
+- Persist meetings, chunks, drafts, and publication history in SQLite.
+- Use the same application services from REST and an MCP client.
 
 ## Supported uploads
 
@@ -23,6 +26,7 @@ Both must be UTF-8 encoded. PDF, Word, and rich-text parsing are intentionally n
 
 - FastAPI backend
 - React + Vite frontend
+- SQLite durable application state
 - Sentence Transformers embeddings
 - FAISS with memory fallback
 - Ollama for local task extraction
@@ -63,6 +67,8 @@ OLLAMA_MODEL=phi3:mini
 RAG_STORE=memory
 EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
 EMBED_PROVIDER=sentence-transformers
+PUBLIC_DEMO_MODE=false
+RETRIEVAL_THRESHOLD=0.08
 ```
 
 Run the API:
@@ -154,7 +160,7 @@ cd backend
 python -m pytest
 ```
 
-Expected result: `11 passed`.
+Expected result: `16 passed`.
 
 Run frontend checks:
 
@@ -163,6 +169,19 @@ cd frontend
 npm run typecheck
 npm run build
 ```
+
+Run the deterministic retrieval evaluation:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m scripts.evaluate_retrieval
+```
+
+The current four-case baseline reports `1.00 recall@1`. See
+[`docs/RETRIEVAL_EVALUATION.md`](docs/RETRIEVAL_EVALUATION.md) for scope and limitations.
+
+For the data model, trust boundaries, hybrid scoring, and SQLite/PostgreSQL rationale, see
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Project notes
 

@@ -20,3 +20,6 @@ EMBED_PROVIDER = os.getenv("EMBED_PROVIDER", "sentence-transformers")
 # FAISS file locations (used only if RAG_STORE=faiss and faiss is installed).
 FAISS_INDEX = os.getenv("FAISS_INDEX", "../data/faiss.index")
 FAISS_META = os.getenv("FAISS_META", "../data/faiss_meta.json")
+
+PUBLIC_DEMO_MODE = os.getenv("PUBLIC_DEMO_MODE", "false").lower() in {"1", "true", "yes"}
+RETRIEVAL_THRESHOLD = float(os.getenv("RETRIEVAL_THRESHOLD", "0.08"))

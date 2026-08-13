@@ -12,9 +12,23 @@ class MemoryStore(VectorStore):
         self._meta: List[Dict[str, Any]] = []
 
     def upsert(self, ids, embeddings, metas):
-        self._ids.extend(ids)
-        self._vecs.extend(embeddings)
-        self._meta.extend(metas)
+        incoming = set(ids)
+        keep = [index for index, record_id in enumerate(self._ids) if record_id not in incoming]
+        self._ids = [self._ids[index] for index in keep] + list(ids)
+        self._vecs = [self._vecs[index] for index in keep] + list(embeddings)
+        self._meta = [self._meta[index] for index in keep] + list(metas)
+
+    def delete(self, filters):
+        keep = [
+            index
+            for index, meta in enumerate(self._meta)
+            if any(meta.get(key) != value for key, value in filters.items())
+        ]
+        removed = len(self._ids) - len(keep)
+        self._ids = [self._ids[index] for index in keep]
+        self._vecs = [self._vecs[index] for index in keep]
+        self._meta = [self._meta[index] for index in keep]
+        return removed
 
     def query(self, embedding, k=5, filters=None):
         if not self._ids:

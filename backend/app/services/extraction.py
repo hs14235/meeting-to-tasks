@@ -1,10 +1,12 @@
 import json
 import logging
+from time import perf_counter
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional
 
 import httpx
 
 from ..tasks import OLLAMA_MODEL, OLLAMA_URL, TIMEOUT, _parse_tasks_json, extract_tasks_ollama, extract_tasks_rules
+from ..storage import save_task_drafts
 from .meetings import MeetingService
 from .shared import normalize_tasks
 
@@ -18,6 +20,7 @@ class ExtractionService:
         self.meetings = meetings
 
     async def extract_tasks(self, meeting_id: str, q: str, k: int) -> Dict[str, Any]:
+        started = perf_counter()
         context = self.meetings.load_context(meeting_id, q, k)
 
         try:
@@ -27,9 +30,31 @@ class ExtractionService:
             tasks_llm = []
 
         if tasks_llm:
-            return {"tasks": normalize_tasks(tasks_llm, context.idxs), "mode": "ollama"}
+            tasks = normalize_tasks(tasks_llm, context.idxs)
+            mode = "ollama"
+        else:
+            tasks = extract_tasks_rules(context.chunks)
+            mode = "rules"
 
-        return {"tasks": extract_tasks_rules(context.chunks), "mode": "rules"}
+        self._attach_evidence(tasks, context.chunks)
+        save_task_drafts(meeting_id, tasks)
+        total_ms = (perf_counter() - started) * 1000
+        return {
+            "tasks": tasks,
+            "mode": mode,
+            "timings": {
+                "retrieval_ms": context.retrieval_ms,
+                "extraction_ms": round(max(0.0, total_ms - context.retrieval_ms), 2),
+                "total_ms": round(total_ms, 2),
+            },
+        }
+
+    @staticmethod
+    def _attach_evidence(tasks: list[dict[str, Any]], chunks: list[dict[str, Any]]) -> None:
+        by_index = {chunk["i"]: chunk for chunk in chunks}
+        for task in tasks:
+            source = by_index.get(task.get("source_i"))
+            task["source_text"] = source["text"] if source else ""
 
     async def stream_tasks(
         self,
@@ -38,12 +63,26 @@ class ExtractionService:
         k: int,
         is_disconnected: Optional[DisconnectFn] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
+        started = perf_counter()
         yield {"stage": "retrieving"}
         context = self.meetings.load_context(meeting_id, q, k)
 
         if not OLLAMA_MODEL:
             yield {"stage": "parsing", "note": "OLLAMA_MODEL not set; using rules fallback."}
-            yield {"stage": "done", "mode": "rules", "tasks": extract_tasks_rules(context.chunks)}
+            tasks = extract_tasks_rules(context.chunks)
+            self._attach_evidence(tasks, context.chunks)
+            save_task_drafts(meeting_id, tasks)
+            total_ms = (perf_counter() - started) * 1000
+            yield {
+                "stage": "done",
+                "mode": "rules",
+                "tasks": tasks,
+                "timings": {
+                    "retrieval_ms": context.retrieval_ms,
+                    "extraction_ms": round(max(0.0, total_ms - context.retrieval_ms), 2),
+                    "total_ms": round(total_ms, 2),
+                },
+            }
             return
 
         system = (
@@ -99,8 +138,34 @@ class ExtractionService:
             yield {"stage": "parsing"}
             tasks = _parse_tasks_json(chunk_text)
             if tasks:
-                yield {"stage": "done", "mode": "ollama", "tasks": normalize_tasks(tasks, context.idxs)}
+                normalized = normalize_tasks(tasks, context.idxs)
+                self._attach_evidence(normalized, context.chunks)
+                save_task_drafts(meeting_id, normalized)
+                total_ms = (perf_counter() - started) * 1000
+                yield {
+                    "stage": "done",
+                    "mode": "ollama",
+                    "tasks": normalized,
+                    "timings": {
+                        "retrieval_ms": context.retrieval_ms,
+                        "extraction_ms": round(max(0.0, total_ms - context.retrieval_ms), 2),
+                        "total_ms": round(total_ms, 2),
+                    },
+                }
                 return
 
         yield {"stage": "rules_fallback", "note": "Falling back to explicit rule-based extraction."}
-        yield {"stage": "done", "mode": "rules", "tasks": extract_tasks_rules(context.chunks)}
+        tasks = extract_tasks_rules(context.chunks)
+        self._attach_evidence(tasks, context.chunks)
+        save_task_drafts(meeting_id, tasks)
+        total_ms = (perf_counter() - started) * 1000
+        yield {
+            "stage": "done",
+            "mode": "rules",
+            "tasks": tasks,
+            "timings": {
+                "retrieval_ms": context.retrieval_ms,
+                "extraction_ms": round(max(0.0, total_ms - context.retrieval_ms), 2),
+                "total_ms": round(total_ms, 2),
+            },
+        }

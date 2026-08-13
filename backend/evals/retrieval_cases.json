@@ -1,0 +1,6 @@
+[
+  {"query": "launch checklist deadline", "expected_chunk": 0},
+  {"query": "retrieval evaluation coverage", "expected_chunk": 1},
+  {"query": "GitHub issue approval policy", "expected_chunk": 2},
+  {"query": "onboarding product review blocker", "expected_chunk": 3}
+]

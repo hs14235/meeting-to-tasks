@@ -20,6 +20,8 @@ dist/
 data/faiss.index
 data/faiss_meta.json
 data/meetings/
+data/meeting_to_tasks.db
+data/meeting_to_tasks.db-*
 
 # OS / editor
 .DS_Store

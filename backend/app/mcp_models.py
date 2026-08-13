@@ -6,16 +6,25 @@ from pydantic import BaseModel, Field
 class IndexMeetingResult(BaseModel):
     ok: bool
     chunks_indexed: int = Field(ge=0)
+    reindexed: bool = False
+    content_hash: str = ""
+    timings: dict[str, float] = Field(default_factory=dict)
 
 
 class SearchHit(BaseModel):
     id: str
     score: float
     meta: dict[str, Any]
+    vector_score: float = 0.0
+    lexical_score: float = 0.0
+    text: str = ""
+    source: dict[str, Any] = Field(default_factory=dict)
 
 
 class SearchMeetingResult(BaseModel):
     results: list[SearchHit]
+    retrieval: dict[str, Any] = Field(default_factory=dict)
+    timings: dict[str, float] = Field(default_factory=dict)
 
 
 class TaskDraft(BaseModel):
@@ -26,11 +35,13 @@ class TaskDraft(BaseModel):
     due_hint: str | None = None
     source_i: int = 0
     confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    source_text: str = ""
 
 
 class ExtractTasksResult(BaseModel):
     tasks: list[TaskDraft]
     mode: Literal["ollama", "rules"]
+    timings: dict[str, float] = Field(default_factory=dict)
 
 
 class IssuePreview(BaseModel):
